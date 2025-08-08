@@ -131,9 +131,11 @@ function Update-Script {
     Write-Log "Checking for script updates..." "INFO"
     try {
         $latestScript = Invoke-RestMethod -Uri $SCRIPT_UPDATE_URL
-        if ($latestScript -and $latestScript -ne (Get-Content -Path $PSScriptRoot\$PSScriptRoot.ps1 -Raw)) {
+        $scriptPath = $MyInvocation.MyCommand.Path
+        $currentContent = Get-Content -Path $scriptPath -Raw
+        if ($latestScript -and $latestScript -ne $currentContent) {
             Write-Log "New version found. Updating script..." "INFO"
-            $latestScript | Out-File -FilePath $PSScriptRoot\$PSScriptRoot.ps1 -Encoding UTF8
+            $latestScript | Out-File -FilePath $scriptPath -Encoding UTF8
             Send-LineMessage "✅ สคริปต์ได้รับการอัปเดตแล้ว กรุณารันสคริปต์อีกครั้ง"
             exit
         } else {
@@ -332,7 +334,7 @@ function Get-WindowsUpdateStatus {
         return $updateInfo
     }
     catch {
-        $Script:DiagnosticResults.Add("❌ Windows Update Status Check Failed: $($_.Exception.Exception.Message)")
+        $Script:DiagnosticResults.Add("❌ Windows Update Status Check Failed: $($_.Exception.Message)")
         Write-Log "Windows Update check failed: $($_.Exception.Message)" "ERROR"
         return $null
     }
@@ -480,7 +482,7 @@ function Test-NetworkConnectivity {
 
 function Invoke-WindowsUpdate {
     Write-Log "Starting Windows Update check and installation..." "INFO"
-    
+
     try {
         # Check if PSWindowsUpdate module is installed
         if (-not (Get-Module -ListAvailable -Name PSWindowsUpdate)) {
@@ -488,18 +490,18 @@ function Invoke-WindowsUpdate {
             Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser -ErrorAction Stop | Out-Null
             Write-Log "PSWindowsUpdate module installed successfully." "SUCCESS"
         }
-        
+
         # Get pending updates
-        $updatesToInstall = Get-WUList -ErrorAction Stop | Where-Object { $_.IsInstalled -eq $false -and $_.Title -notlike "*preview*" }
-        
+        $updatesToInstall = Get-WindowsUpdate -IsInstalled 0 -IsHidden 0 -ErrorAction Stop
+
         if ($updatesToInstall.Count -gt 0) {
             Write-Log "Found $($updatesToInstall.Count) pending Windows updates. Starting installation..." "INFO"
-            
+
             # Download and install updates silently
-            $installResult = Install-WUFile -AcceptAll -AutoReboot -ErrorAction Stop
-            
+            $installResult = Install-WindowsUpdate -AcceptAll -AutoReboot:$false -ErrorAction Stop
+
             # Check for reboot requirement
-            if ($installResult.RebootRequired) {
+            if ($global:RebootRequired) {
                 $Script:RebootRequired = $true
                 $Script:FixedIssues.Add("🔄 Windows updates installed. ต้องรีบูตเครื่องเพื่อเสร็จสิ้นกระบวนการ")
             } else {
