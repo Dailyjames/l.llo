@@ -31,6 +31,7 @@ function Write-Log {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logMessage = "[$timestamp] [$Level] $Message"
     Write-Host $logMessage
+
     try {
         Add-Content -Path "SystemDiagnostics.log" -Value $logMessage -Encoding UTF8
     } catch {
@@ -62,6 +63,7 @@ function Send-LineMessage {
             )
         }
         
+     
         # Convert the body to JSON string, then to UTF8 byte array for correct encoding
         $jsonBody = $body | ConvertTo-Json -Depth 3
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
@@ -687,7 +689,8 @@ function Start-SystemDiagnostics {
     # Send initial notification
     Send-LineMessage "🔄 Start checking the system with AI...`n📅 $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')"
     
-    # Collect system data
+    #
+    Collect system data
     $systemInfo = Get-SystemInfo
     $performance = Get-SystemPerformance
     $errors = Get-SystemErrors  
@@ -751,6 +754,7 @@ Network Issues: $(($network | Where-Object { $_.Status -like "*Failed*" } | ForE
                 $currentPart = $line + "`n"
             }
             else {
+            
                 $currentPart += $line + "`n"
             }
         }
@@ -783,6 +787,7 @@ Network Issues: $(($network | Where-Object { $_.Status -like "*Failed*" } | ForE
         
         try {
             $detailedReport | Out-File -FilePath $fullPath -Encoding UTF8
+            
             Write-Log "Detailed report saved to: $fullPath" "INFO"
         }
         catch {
@@ -795,3 +800,4 @@ Network Issues: $(($network | Where-Object { $_.Status -like "*Failed*" } | ForE
 
 # Execute the main function
 Start-SystemDiagnostics
+
